@@ -4,7 +4,7 @@ Just a simple chat bot for twitch.
 Create a new file called "main.py" (or whatever you like) and replace the following code with the required information.
 ``` py
 import jucebot #import juecbot and call ChatBot
-# Pass in your username, the target channel, your oauth token, and you can select color as well (cadet blue by default)
+# Pass in your username, the target channel, your oauth token. Color is optional. (cadet blue by default)
 bot = jucebot.ChatBot(username="USERNAME",target="CHANNEL TO JOIN",oauth="TWITCH OAUTH") 
 
 @bot.new_command("!helloworld") # Add the command and pass in an "acivation" phrase.
