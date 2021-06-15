@@ -1,4 +1,4 @@
-import socket, logging, os
+import socket, logging
 
 class ChatBot:
     def __init__(self, username, target, oauth, color="CadetBlue"):
