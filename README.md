@@ -1,7 +1,7 @@
 # Jucebot
 Just a simple chat bot for twitch.
 ## Getting Started
-Create a new file called "main.py" (or whatever you like) and replace the following code with the required information.
+Create a new file in the same dir as jucebot called "main.py" (or whatever you like) and replace the following code with the required information.
 ``` py
 import jucebot #import juecbot and call ChatBot
 # Pass in your username, the target channel, your oauth token. Color is optional. (cadet blue by default)
