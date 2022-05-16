@@ -1,5 +1,7 @@
 # Jucebot
 Just a simple chat bot for twitch.
+## Contact
+Github: https://github.com/justin-wittenmeier/Jucebot/discussions/categories/general
 ## Getting Started
 Create a new file in the same dir as jucebot called "main.py" (or whatever you like) and replace the following code with the required information.
 ``` py
