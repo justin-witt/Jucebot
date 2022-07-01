@@ -1,8 +1,9 @@
 __license__ = "http://unlicense.org/"
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
-import socket, logging, threading
+import socket, logging
 from time import sleep
+from threading import Thread
 
 
 class ChatBot:
@@ -14,11 +15,11 @@ class ChatBot:
         self.__token=oauth # Get Oauth for Twitch
         self.__color = color
         self.__encode="utf-8"
-        self.__twitch_socket=self.__connect()
         self.__commands={}
-        self.__send_message("/me Connected.") # Notify chat that the bot has connected
-        self.__send_message(f"/color {self.__color}") # Set bot color
         self.__timers=[]
+        self.__twitch_socket=self.__connect()
+        self.__send_message(f"/color {self.__color}") # Set bot color
+        self.__send_message("/me Connected.") # Notify chat that the bot has connected
     
     def __connect(self):
         logging.info("opening socket...")
@@ -54,7 +55,7 @@ class ChatBot:
     #Add new timer
     def timer(self, mins=15):
         def outter_wrapper(func):
-            self.__timers.append(threading.Thread(target=self.__create_timer, args=(func, mins)))
+            self.__timers.append(Thread(target=self.__create_timer, args=(func, mins)))
             def inner_wrapper():
                 func()
             return inner_wrapper
