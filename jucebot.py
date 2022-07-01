@@ -1,4 +1,9 @@
-import socket, logging
+__license__ = "http://unlicense.org/"
+__version__ = "1.1.0"
+
+import socket, logging, threading
+from time import sleep
+
 
 class ChatBot:
     def __init__(self, username, target, oauth, color="CadetBlue"):
@@ -13,6 +18,7 @@ class ChatBot:
         self.__commands={}
         self.__send_message("/me Connected.") # Notify chat that the bot has connected
         self.__send_message(f"/color {self.__color}") # Set bot color
+        self.__timers=[]
     
     def __connect(self):
         logging.info("opening socket...")
@@ -37,13 +43,27 @@ class ChatBot:
         return t_socket
 
     #Add new commands
-    def new_command(self, activation):
+    def command(self, activation):
         def outter_wrapper(func):
             self.__commands[activation]=func
             def inner_wrapper(*args, **kwargs):
-                func(*args, *kwargs)
+                func(*args, **kwargs)
             return inner_wrapper
         return outter_wrapper
+
+    #Add new timer
+    def timer(self, mins=15):
+        def outter_wrapper(func):
+            self.__timers.append(threading.Thread(target=self.__create_timer, args=(func, mins)))
+            def inner_wrapper():
+                func()
+            return inner_wrapper
+        return outter_wrapper
+
+    def __create_timer(self, func, mins):
+        while True:
+            sleep(mins*60)
+            self.__send_message(func())
 
     def __send_message(self, msg):
         self.__twitch_socket.sendall(f"PRIVMSG #{self.__target_channel} :{msg}\r\n".encode(self.__encode))
@@ -69,6 +89,8 @@ class ChatBot:
 
     # Starts the bot
     def run(self):
+        for thread in self.__timers:
+            thread.start()
         while 1:
             data=self.__recv_messages()
             for i in data:
@@ -82,3 +104,4 @@ class ChatBot:
         def __init__(self, user, message):
             self.user=user
             self.message=message
+    
