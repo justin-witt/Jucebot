@@ -1,7 +1,7 @@
 # Jucebot
 Third-party bot for https://twitch.tv.
 ## Contact
-Github: https://github.com/justin-wittenmeier/Jucebot/discussions/categories/general
+Github: https://github.com/justin-witt/Jucebot/discussions/categories/general
 ## Getting Started
 Create a new file in the same dir as jucebot called "main.py" (or whatever you like) and replace the following code with the required information.
 ``` py
