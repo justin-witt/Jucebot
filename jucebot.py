@@ -1,13 +1,12 @@
-__license__ = "http://unlicense.org/"
-__version__ = "1.1.1"
+__license__ = "https://unlicense.org/"
+__version__ = "1.2.0"
 
-import socket, logging
+import socket, logging, re
 from time import sleep
 from threading import Thread
 
-
 class ChatBot:
-    def __init__(self, username, target, oauth, color="CadetBlue"):
+    def __init__(self, username, target, oauth, color="CadetBlue", banphrases:list=None):
         self.__host='irc.chat.twitch.tv'
         self.__port=6667
         self.__username=username # Bot username
@@ -17,6 +16,7 @@ class ChatBot:
         self.__encode="utf-8"
         self.__commands={}
         self.__timers=[]
+        self.__banphrases=[] if banphrases == None else banphrases
         self.__twitch_socket=self.__connect()
         self.__send_message(f"/color {self.__color}") # Set bot color
         self.__send_message("/me Connected.") # Notify chat that the bot has connected
@@ -96,11 +96,16 @@ class ChatBot:
             data=self.__recv_messages()
             for i in data:
                 logging.info(f"{i.user}:{i.message}")
+                self.__chat_moderation(i)
                 try:
                     self.__send_message(self.__commands[i.message.split(" ")[0]](i))
                 except Exception:
-                    pass                
+                    pass
     
+    def __chat_moderation(self, msg):
+        if any(re.match(i, msg.message) != None for i in self.__banphrases):
+            self.__send_message(f"/ban {msg.user}")            
+
     class __Message:
         def __init__(self, user, message):
             self.user=user
