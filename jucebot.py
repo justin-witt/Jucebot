@@ -1,9 +1,9 @@
 __license__ = "https://unlicense.org/"
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 
 import socket, logging, re
 from time import sleep
-from threading import Thread
+import threading
 
 class ChatBot:
     def __init__(self, username, target, oauth, color="CadetBlue", banphrases:list=None):
@@ -55,16 +55,18 @@ class ChatBot:
     #Add new timer
     def timer(self, mins=15):
         def outter_wrapper(func):
-            self.__timers.append(Thread(target=self.__create_timer, args=(func, mins)))
+            self.__timers.append(threading.Thread(target=self.__create_timer, args=(func, mins)))
             def inner_wrapper():
                 func()
             return inner_wrapper
         return outter_wrapper
 
     def __create_timer(self, func, mins):
-        while True:
-            sleep(mins*60)
-            self.__send_message(func())
+        while threading.main_thread().is_alive():
+            for i in range(60*mins,-1,-1):
+                if not threading.main_thread().is_alive(): break
+                if i == 0: self.__send_message(func())
+                sleep(1)
 
     def __send_message(self, msg):
         self.__twitch_socket.sendall(f"PRIVMSG #{self.__target_channel} :{msg}\r\n".encode(self.__encode))
@@ -110,4 +112,3 @@ class ChatBot:
         def __init__(self, user, message):
             self.user=user
             self.message=message
-    
