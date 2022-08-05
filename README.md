@@ -1,5 +1,5 @@
 # Jucebot
-Third-party bot for https://twitch.tv.
+Third-party asynchronous bot for https://twitch.tv.
 ## Contact
 Github: https://github.com/justin-witt/Jucebot/discussions/categories/general
 ## Getting Started
@@ -16,17 +16,17 @@ bot = jucebot.ChatBot(username="USERNAME",target="CHANNEL TO JOIN",oauth="TWITCH
 # You do not have to include banphrases if you do not wish to use the function it will default to a blank list.
 
 @bot.command("!helloworld") # Add the command and pass in an "acivation" phrase.
-def helloworld(msg): # Include a variable to access the message object data. (msg.user; msg.message)
+async def helloworld(msg): # Include a variable to access the message object data. (msg.user; msg.message)
     # Return a string with the message and @ of the user you would like to target.
     return f"@{msg.user} hello!"
 
 @bot.timer(30) # Create a timer and set how many mins(INTEGER) you want between the message to be sent
-def github(): # Return the message that you want sent at the specified interval.
+async def github(): # Return the message that you want sent at the specified interval.
     return "Check out my github! https://github.com/justin-witt"
 
 #Timers are set to 15 minutes by default if no time is passed in.
 @bot.timer
-def example():
+async def example():
     return "This timer will run every 15 minutes"
 
 #Run the bot
