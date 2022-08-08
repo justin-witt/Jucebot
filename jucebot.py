@@ -1,5 +1,6 @@
 __license__ = "https://unlicense.org/"
-__version__ = "2.0.0"
+__version__ = "2.0.1"
+__author__="https://github.com/justin-witt"
 
 import logging, re, asyncio
 
@@ -16,7 +17,6 @@ class ChatBot():
         self.__timers=[]
         self.__banphrases=[] if banphrases == None else banphrases
         self.__twitchSocket=None
-
 
     async def __connect(self):
         """
@@ -80,6 +80,41 @@ class ChatBot():
             await asyncio.sleep(timer[1]*60)
             asyncio.create_task(self.__sendMessage(await asyncio.create_task(timer[0]())))
 
+    async def __main(self):
+        """
+        main loop for bot
+        """
+        self.__twitchSocket= await self.__connect()
+        asyncio.create_task(self.__sendMessage(f"/color {self.__color}"))
+        asyncio.create_task(self.__sendMessage("/me Connected."))
+        for timer in self.__timers:
+            asyncio.create_task(self.__createTimer(timer))
+        while True:
+            try:
+                data=self.__recvMessages()
+                async for i in data:
+                    logging.info(f"{i.user}:{i.message}")
+                    asyncio.create_task(self.__chatModeration(i))
+                    try:
+                        asyncio.create_task(self.__sendMessage(await asyncio.create_task(self.__commands[i.message.split(" ")[0]](i))))
+                    except KeyError:
+                        pass
+            except ConnectionResetError:
+                logging.warning("connection reset attemption to reconnect...")
+                self.__twitchSocket= await self.__connect()
+                logging.info("socket reset...")
+
+    class __Message:
+        def __init__(self, user, message) -> None:
+            self.user=user
+            self.message=message
+
+    def run(self):
+        """
+        starts main loop for chatbot
+        """
+        asyncio.run(self.__main())
+
     def command(self,activation):
         """
         add command with activation for use
@@ -101,32 +136,3 @@ class ChatBot():
                 func(*args, **kwargs)
             return inner
         return outter
-
-    async def main(self):
-        """
-        main loop for bot
-        """
-        self.__twitchSocket= await self.__connect()
-        asyncio.create_task(self.__sendMessage(f"/color {self.__color}"))
-        asyncio.create_task(self.__sendMessage("/me Connected."))
-        for timer in self.__timers:
-            asyncio.create_task(self.__createTimer(timer))
-        while True:
-            data=self.__recvMessages()
-            async for i in data:
-                logging.info(f"{i.user}:{i.message}")
-                asyncio.create_task(self.__chatModeration(i))
-                try:
-                    asyncio.create_task(self.__sendMessage(await asyncio.create_task(self.__commands[i.message.split(" ")[0]](i))))
-                except KeyError:
-                    pass
-    def run(self):
-        """
-        starts main loop for chatbot
-        """
-        asyncio.run(self.main())
-
-    class __Message:
-        def __init__(self, user, message) -> None:
-            self.user=user
-            self.message=message
