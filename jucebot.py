@@ -1,124 +1,170 @@
 __license__ = "https://unlicense.org/"
-__version__ = "2.0.1"
+__version__ = "2.0.2"
 __author__="https://github.com/justin-witt"
 
 import logging, re, asyncio
 
-class ChatBot():
-    def __init__(self, username, target, oauth, color="CadetBlue", banphrases:list=None) -> None:
-        self.__HOST='irc.chat.twitch.tv'
-        self.__PORT=6667
-        self.__USERNAME=username
-        self.__TARGET=target
-        self.__TOKEN=oauth
-        self.__ENCODE="utf-8"
-        self.__color=color
-        self.__commands={}
-        self.__timers=[]
-        self.__banphrases=[] if banphrases == None else banphrases
-        self.__twitchSocket=None
+class Bot:
 
-    async def __connect(self):
-        """
-        initalize connection to twitch
-        """
-        logging.info("opening socket...")
-        logging.info("connecting...")
-        tSocket=await asyncio.open_connection(self.__HOST,self.__PORT)
-        logging.info("sending token...")
-        tSocket[1].write(f"PASS {self.__TOKEN}\r\n".encode(self.__ENCODE))
-        logging.info("sending username...")
-        tSocket[1].write(f"NICK {self.__USERNAME}\r\n".encode(self.__ENCODE))
-        logging.info("joining room...")
-        tSocket[1].write(f"JOIN #{self.__TARGET}\r\n".encode(self.__ENCODE))
-        joining=True
-        while joining:
-            buffer=await tSocket[0].read(1024)
-            buffer=buffer.decode()
-            data=buffer.splitlines()
-            for i in data:
-                logging.info(i)
-                if "End of /NAMES list" in i:
-                    joining=False
-        logging.info(f"connected to {self.__TARGET}'s chat room...")
-        return tSocket
 
-    async def __sendMessage(self,msg):
-        """
-        Send twitch message
-        """
-        self.__twitchSocket[1].write(f"PRIVMSG #{self.__TARGET} :{msg}\r\n".encode(self.__ENCODE))
-        logging.info(f"outgoing message:{msg}")
+    __HOST='irc.chat.twitch.tv'
+    __PORT=6667
+    __ENCODE="utf-8"
+    __reader=None
+    __writer=None
 
-    async def __pingPong(self,msg):
-        if 'PING :tmi.twitch.tv' in msg:
-            logging.info("sending pong...")
-            self.__twitchSocket[1].write(f"{msg.replace('PING', 'PONG')}\n".encode(self.__ENCODE))
-            return True
-        return False
-
-    async def __recvMessages(self):
-        buffer = await self.__twitchSocket[0].read(1024)
-        buffer=buffer.decode()
-        data=buffer.splitlines()
-        for message in data:
-            pingPong=await asyncio.create_task(self.__pingPong(message))
-            if pingPong==False:
-                message=message[1:].split("!",1)
-                message[1]=message[1].split(":",1)[1]
-                yield self.__Message(message[0], message[1])
-
-    async def __chatModeration(self,msg):
-        if any(re.match(i, msg.message) != None for i in self.__banphrases):
-            asyncio.create_task(self.__sendMessage(f"/ban {msg.user}"))
-
-    async def __createTimer(self, timer):
-        """
-        create timer loop
-        """
-        while True:
-            await asyncio.sleep(timer[1]*60)
-            asyncio.create_task(self.__sendMessage(await asyncio.create_task(timer[0]())))
-
-    async def __main(self):
-        """
-        main loop for bot
-        """
-        self.__twitchSocket= await self.__connect()
-        asyncio.create_task(self.__sendMessage(f"/color {self.__color}"))
-        asyncio.create_task(self.__sendMessage("/me Connected."))
-        for timer in self.__timers:
-            asyncio.create_task(self.__createTimer(timer))
-        while True:
-            try:
-                data=self.__recvMessages()
-                async for i in data:
-                    logging.info(f"{i.user}:{i.message}")
-                    asyncio.create_task(self.__chatModeration(i))
-                    try:
-                        asyncio.create_task(self.__sendMessage(await asyncio.create_task(self.__commands[i.message.split(" ")[0]](i))))
-                    except KeyError:
-                        pass
-            except ConnectionResetError:
-                logging.warning("connection reset attemption to reconnect...")
-                self.__twitchSocket= await self.__connect()
-                logging.info("socket reset...")
 
     class __Message:
         def __init__(self, user, message) -> None:
-            self.user=user
-            self.message=message
+            self.user = user
+            self.message = message
+
+
+    def __init__(self, username:str, target:str, oauth:str, color:str="CadetBlue", banphrases:list=None) -> None:
+        self.__USERNAME=username
+        self.__TARGET=target
+        self.__TOKEN=oauth
+        self.__color=color
+        self.__banphrases=[] if not banphrases else banphrases
+        self.__commands={}
+        self.__timers=[]
+    
+
+    async def __connect(self) -> None:
+        """Connect to twitch and set reader and writer.
+        """
+
+        logging.info("[CONNECTING] opening connection")
+        self.__reader, self.__writer = await asyncio.open_connection(self.__HOST, self.__PORT)
+        logging.info("[CONNECTING] sending token")
+        self.__writer.write(f"PASS {self.__TOKEN}\r\n".encode(self.__ENCODE))
+        logging.info("[CONNECTING] sending username")
+        self.__writer.write(f"NICK {self.__USERNAME}\r\n".encode(self.__ENCODE))
+        logging.info("[CONNECTING] joining room")
+        self.__writer.write(f"JOIN #{self.__TARGET}\r\n".encode(self.__ENCODE))
+        
+        join = True
+        
+        while join:
+            buff = await self.__reader.read(1024)
+            buff = buff.decode()
+            data = buff.splitlines()
+            for msg in data:
+                logging.info(f"[CONNECTING] {msg}")
+                if "End of /NAMES list" in msg:
+                    join = False
+
+
+    async def __sendMessage(self, msg:str) -> None:
+        """Send chat message
+
+            Args:
+                msg:str - Message to send in chat
+        """
+
+        self.__writer.write(f"PRIVMSG #{self.__TARGET} :{msg}\r\n".encode(self.__ENCODE))
+        logging.info(f"[CHAT] {self.__USERNAME}:{msg}")
+
+
+    async def __pingPong(self, msg:str) -> bool:
+        """Respond to ping request from twitch
+
+            Args:
+                msg:str - Message to check for ping request
+        """
+
+        if "PING :tmi.twitch.tv" in msg:
+            self.__writer.write(f"{msg.replace('PING','PONG')}\n".encode(self.__ENCODE))
+            logging.info("[CONNECTION] ping pong")
+            return True
+        return False
+
+
+    async def __recvMessages(self) -> __Message:
+        """Recieve messages from twitch
+
+            Return: yields __Message objects
+        """
+        
+        buff = await self.__reader.read(2048)
+        buff = buff.decode()
+        buff = buff.splitlines()
+        for msg in buff:
+            pingPong = await self.__pingPong(msg)
+            if not pingPong:
+                msg = msg[1:].split("!",1)
+                msg[1] = msg[1].split(":",1)[1]
+                yield self.__Message(msg[0], msg[1])
+
+
+    async def __mod(self, msg:__Message) -> None:
+        """Check message against ban phrase
+
+            Args:
+                msg:__Message - Mesage to check against banphrases
+        """        
+        if any(re.search(i, msg.message) != None for i in self.__banphrases):
+            asyncio.create_task(self.__sendMessage(f"/ban {msg.user}"))
+            logging.info(f"[BAN TRIGGER] USER: {msg.user} MSG: {msg.message}")
+
+
+    async def __createTimer(self, timer:list):
+        """Create timer to send messages
+
+            Args:
+                timer:list - timer[0]:function function that returns message to send | timer[1]:int minutes between messages 
+        """
+
+        await asyncio.sleep(timer[1]*60)
+        msg = await timer[0]()
+        asyncio.create_task(self.__sendMessage(msg))
+
+
+    async def __main(self):
+        """Main loop function
+        """
+
+        await self.__connect()
+        asyncio.create_task(self.__sendMessage(f"/color {self.__color}"))
+        asyncio.create_task(self.__sendMessage("/me Connected."))
+        
+        for timer in self.__timers:
+            asyncio.create_task(self.__createTimer(timer))
+        
+        while True:
+            try:
+
+                data = self.__recvMessages()
+
+                async for msg in data:
+                    logging.info(f"[CHAT] {msg.user}:{msg.message}")
+                    asyncio.create_task(self.__mod(msg))
+
+                    try:
+                        outgoing = await self.__commands[msg.message.split(" ")[0]](msg)
+                        asyncio.create_task(self.__sendMessage(outgoing))
+                    except KeyError:
+                        pass
+
+            except ConnectionResetError:
+                logging.warning("connection reset attemption to reconnect...")
+                await self.__connect()
+                logging.info("socket reset...")
 
     def run(self):
+        """Starts the main loop
         """
-        starts main loop for chatbot
-        """
+
         asyncio.run(self.__main())
 
-    def command(self,activation):
+
+    def command(self, activation:str):
+        """Add command to bot
+
+            Args:
+                activation:str = phrase that will trigger message response
         """
-        add command with activation for use
-        """
+
         def outter(func):
             self.__commands[activation]=func
             async def inner(*args, **kwargs):
@@ -126,10 +172,14 @@ class ChatBot():
             return inner
         return outter
 
-    def timer(self,timer=15):
+
+    def timer(self, timer:int=15):
+        """Add timer to bot
+
+            Args:
+                timer:int = minutes between sending message
         """
-        add message to be sent after X mins
-        """
+
         def outter(func):
             self.__timers.append([func, timer])
             async def inner(*args,**kwargs):
