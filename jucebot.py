@@ -1,5 +1,5 @@
 __license__ = "https://unlicense.org/"
-__version__ = "2.0.3"
+__version__ = "2.0.4"
 __author__="https://github.com/justin-witt"
 
 import logging, re, asyncio
@@ -152,9 +152,9 @@ class Bot:
                         pass
 
             except ConnectionResetError:
-                logging.warning("connection reset attemption to reconnect...")
+                logging.warning("[CONNECTION] connection reset attemption to reconnect")
                 await self.__connect()
-                logging.info("socket reset...")
+                logging.info("[CONNECTION] socket reset")
 
     def run(self):
         """Starts the main loop
