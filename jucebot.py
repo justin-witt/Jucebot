@@ -1,5 +1,5 @@
 __license__ = "https://unlicense.org/"
-__version__ = "2.0.2"
+__version__ = "2.0.3"
 __author__="https://github.com/justin-witt"
 
 import logging, re, asyncio
@@ -38,10 +38,13 @@ class Bot:
         self.__reader, self.__writer = await asyncio.open_connection(self.__HOST, self.__PORT)
         logging.info("[CONNECTING] sending token")
         self.__writer.write(f"PASS {self.__TOKEN}\r\n".encode(self.__ENCODE))
+        await self.__writer.drain()
         logging.info("[CONNECTING] sending username")
         self.__writer.write(f"NICK {self.__USERNAME}\r\n".encode(self.__ENCODE))
+        await self.__writer.drain()
         logging.info("[CONNECTING] joining room")
         self.__writer.write(f"JOIN #{self.__TARGET}\r\n".encode(self.__ENCODE))
+        await self.__writer.drain()
         
         join = True
         
@@ -63,6 +66,7 @@ class Bot:
         """
 
         self.__writer.write(f"PRIVMSG #{self.__TARGET} :{msg}\r\n".encode(self.__ENCODE))
+        await self.__writer.drain()
         logging.info(f"[CHAT] {self.__USERNAME}:{msg}")
 
 
@@ -75,6 +79,7 @@ class Bot:
 
         if "PING :tmi.twitch.tv" in msg:
             self.__writer.write(f"{msg.replace('PING','PONG')}\n".encode(self.__ENCODE))
+            await self.__writer.drain()
             logging.info("[CONNECTION] ping pong")
             return True
         return False
