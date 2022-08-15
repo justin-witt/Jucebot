@@ -1,5 +1,5 @@
 __license__ = "https://unlicense.org/"
-__version__ = "2.0.4"
+__version__ = "2.0.5"
 __author__="https://github.com/justin-witt"
 
 import logging, re, asyncio
@@ -119,10 +119,10 @@ class Bot:
             Args:
                 timer:list - timer[0]:function function that returns message to send | timer[1]:int minutes between messages 
         """
-
-        await asyncio.sleep(timer[1]*60)
-        msg = await timer[0]()
-        asyncio.create_task(self.__sendMessage(msg))
+        while True:
+            await asyncio.sleep(timer[1]*60)
+            msg = await timer[0]()
+            asyncio.create_task(self.__sendMessage(msg))
 
 
     async def __main(self):
